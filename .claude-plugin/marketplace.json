@@ -1,0 +1,10 @@
+{
+  "name": "local-plugins",
+  "description": "Local custom plugins",
+  "plugins": [
+    {
+      "name": "agent-visualizer",
+      "path": "agent-visualizer"
+    }
+  ]
+}

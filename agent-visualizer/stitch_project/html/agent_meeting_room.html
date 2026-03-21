@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Neural Conduit | Virtual Meeting Interface</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary": "#004c5e",
+              "on-surface-variant": "#9baad6",
+              "primary-container": "#00d2ff",
+              "background": "#060e20",
+              "tertiary": "#e0ecff",
+              "surface-dim": "#060e20",
+              "on-error": "#490006",
+              "surface-container-lowest": "#000000",
+              "secondary-fixed-dim": "#e7c9ff",
+              "surface-bright": "#172b54",
+              "on-tertiary-container": "#414f62",
+              "surface": "#060e20",
+              "surface-variant": "#142449",
+              "on-error-container": "#ff9993",
+              "outline-variant": "#38476d",
+              "primary-fixed": "#00d2ff",
+              "error": "#ff716c",
+              "error-container": "#8a1a1e",
+              "surface-container-highest": "#142449",
+              "outline": "#65759e",
+              "on-surface": "#dee5ff",
+              "tertiary-dim": "#c1d0e6",
+              "inverse-surface": "#faf8ff",
+              "on-primary-container": "#004253",
+              "inverse-on-surface": "#4d556b",
+              "tertiary-fixed-dim": "#c1d0e6",
+              "primary": "#72dcff",
+              "secondary-fixed": "#f0dbff",
+              "surface-tint": "#72dcff",
+              "on-secondary": "#5f00a4",
+              "primary-fixed-dim": "#00c3ed",
+              "surface-container": "#0c1934",
+              "on-primary-fixed": "#002c38",
+              "secondary": "#ddb7ff",
+              "on-secondary-fixed-variant": "#8126cf",
+              "surface-container-high": "#101e3e",
+              "on-surface-container": "#c589ff",
+              "surface-container-low": "#081329",
+              "inverse-primary": "#00687f",
+              "on-background": "#dee5ff",
+              "error-dim": "#c94947",
+              "on-tertiary-fixed-variant": "#4a596c",
+              "secondary-dim": "#9c48ea",
+              "on-tertiary-fixed": "#2e3d4e",
+              "primary-dim": "#00c3ed",
+              "on-secondary-fixed": "#5e00a2",
+              "on-primary-fixed-variant": "#004c5e",
+              "tertiary-fixed": "#cfdef5",
+              "tertiary-container": "#cfdef5",
+              "secondary-container": "#3a0068",
+              "on-tertiary": "#49586b"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-panel {
+        background: rgba(12, 25, 52, 0.7);
+        backdrop-filter: blur(16px);
+      }
+      .neural-gradient {
+        background: linear-gradient(135deg, #72dcff 0%, #00d2ff 100%);
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 w-full z-50 bg-[#060e20] shadow-[0_32px_32px_rgba(114,220,255,0.06)] font-['Inter'] antialiased tracking-tight">
+<div class="flex items-center justify-between px-6 h-16 w-full bg-[#081329]">
+<div class="text-xl font-black tracking-tighter text-[#72dcff]">Neural Conduit</div>
+<div class="hidden md:flex items-center gap-8">
+<button class="text-[#72dcff] font-bold transition-transform active:scale-95">Active Streams</button>
+<button class="text-[#38476d] hover:bg-[#101e3e] hover:text-[#e0ecff] transition-all px-3 py-1 rounded">History</button>
+<button class="text-[#38476d] hover:bg-[#101e3e] hover:text-[#e0ecff] transition-all px-3 py-1 rounded">Neural Map</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-[#38476d] cursor-pointer hover:text-[#72dcff]">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-[#38476d] cursor-pointer hover:text-[#72dcff]">settings</span>
+<span class="material-symbols-outlined text-[#38476d] cursor-pointer hover:text-[#72dcff]">account_circle</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-[#081329] border-r border-[#38476d]/15 font-['Inter'] text-sm font-medium py-20 hidden lg:flex flex-col">
+<div class="px-6 mb-8">
+<h2 class="text-[#72dcff] text-lg font-bold">Sessions</h2>
+<p class="text-[#38476d] text-xs">Neural Interface</p>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="bg-[#101e3e] text-[#72dcff] border-l-2 border-[#72dcff] px-4 py-3 flex items-center gap-3 active:translate-x-1 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span>Active Streams</span>
+</div>
+<div class="text-[#38476d] px-4 py-3 flex items-center gap-3 hover:bg-[#0c1934] hover:text-[#e0ecff] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>History</span>
+</div>
+<div class="text-[#38476d] px-4 py-3 flex items-center gap-3 hover:bg-[#0c1934] hover:text-[#e0ecff] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span>Neural Map</span>
+</div>
+<div class="text-[#38476d] px-4 py-3 flex items-center gap-3 hover:bg-[#0c1934] hover:text-[#e0ecff] transition-all cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</div>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full neural-gradient text-on-primary-fixed font-bold py-2.5 rounded-md shadow-lg shadow-primary/10 transition-transform active:scale-95">
+                New Session
+            </button>
+<div class="mt-6 space-y-2">
+<div class="text-[#38476d] flex items-center gap-3 hover:text-[#e0ecff] transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</div>
+<div class="text-[#38476d] flex items-center gap-3 hover:text-[#e0ecff] transition-colors cursor-pointer">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Logs</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Workspace Canvas -->
+<main class="lg:pl-64 pt-16 min-h-screen flex flex-col">
+<div class="flex-1 p-6 md:p-10">
+<!-- Header Section -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-secondary text-[10px] font-bold uppercase tracking-wider">Live Session</span>
+<span class="text-outline text-xs font-mono">ID: NC-882-OMEGA</span>
+</div>
+<h1 class="text-4xl font-black tracking-tight text-on-surface">Market Synapse Meeting</h1>
+</div>
+<div class="flex gap-3">
+<div class="flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-2 border-surface-container bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-surface-container bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">database</span>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-surface-container bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+</div>
+</div>
+<button class="bg-surface-container hover:bg-surface-container-high text-on-surface px-4 py-2 rounded-md transition-colors flex items-center gap-2 text-sm font-medium border border-outline-variant/10">
+<span class="material-symbols-outlined text-base">share</span> Invite Agent
+                    </button>
+</div>
+</div>
+<!-- Bento Grid of Meeting Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Strategy Agent Card -->
+<div class="surface-container-high rounded-xl overflow-hidden flex flex-col h-80 border-l-2 border-primary shadow-2xl relative group">
+<div class="p-6 flex flex-col h-full">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full neural-gradient flex items-center justify-center shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-on-primary-fixed text-3xl" style="font-variation-settings: 'FILL' 1;">strategy</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-on-surface leading-tight">Strategy Agent</h3>
+<span class="text-primary text-[10px] font-mono tracking-widest uppercase">Lead Architect</span>
+</div>
+</div>
+<div class="flex gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+</div>
+</div>
+<div class="mb-auto">
+<div class="text-outline text-[10px] uppercase font-bold tracking-widest mb-1">Main Focus</div>
+<p class="text-on-surface font-medium text-lg leading-snug">Evaluating Market Volatility &amp; Synthesis of conflicting data streams.</p>
+</div>
+<div class="mt-6 bg-surface-container-lowest rounded p-3 font-mono text-[11px] text-primary/70 border border-primary/5">
+<div class="flex justify-between mb-1">
+<span>INTERNAL_LOG</span>
+<span>0.002ms</span>
+</div>
+<p class="truncate opacity-80">&gt; Re-routing logic gates for Q3 projections...</p>
+</div>
+</div>
+</div>
+<!-- Data Scout Card -->
+<div class="surface-container-high rounded-xl overflow-hidden flex flex-col h-80 border-l-2 border-secondary shadow-2xl relative group">
+<div class="p-6 flex flex-col h-full">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center shadow-lg shadow-secondary/20">
+<span class="material-symbols-outlined text-secondary text-3xl" style="font-variation-settings: 'FILL' 1;">travel_explore</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-on-surface leading-tight">Data Scout</h3>
+<span class="text-secondary text-[10px] font-mono tracking-widest uppercase">Acquisition Unit</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">more_vert</span>
+</div>
+<div class="mb-auto">
+<div class="text-outline text-[10px] uppercase font-bold tracking-widest mb-1">Main Focus</div>
+<p class="text-on-surface font-medium text-lg leading-snug">Scraping high-frequency global indices and sentiment analysis.</p>
+</div>
+<div class="mt-6 flex gap-2">
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded">78 GB/s</span>
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded">Latency: 0.1ms</span>
+</div>
+</div>
+</div>
+<!-- Risk Auditor Card -->
+<div class="surface-container-high rounded-xl overflow-hidden flex flex-col h-80 border-l-2 border-error shadow-2xl relative group">
+<div class="p-6 flex flex-col h-full">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-error-container flex items-center justify-center shadow-lg shadow-error/20">
+<span class="material-symbols-outlined text-error text-3xl" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-on-surface leading-tight">Risk Auditor</h3>
+<span class="text-error text-[10px] font-mono tracking-widest uppercase">Compliance</span>
+</div>
+</div>
+</div>
+<div class="mb-auto">
+<div class="text-outline text-[10px] uppercase font-bold tracking-widest mb-1">Main Focus</div>
+<p class="text-on-surface font-medium text-lg leading-snug">Detecting anomalies in liquidity pools and protocol safety.</p>
+</div>
+<div class="mt-6 bg-error-container/10 border border-error/20 rounded p-3">
+<div class="flex items-center gap-2 text-error text-[11px] font-bold">
+<span class="material-symbols-outlined text-sm">warning</span>
+<span>PROTOCOL DRIFT DETECTED</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sentiment Analyst Card -->
+<div class="surface-container-high rounded-xl overflow-hidden flex flex-col h-80 border-l-2 border-tertiary shadow-2xl relative group">
+<div class="p-6 flex flex-col h-full">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-3xl" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-on-surface leading-tight">Sentiment Analyst</h3>
+<span class="text-tertiary text-[10px] font-mono tracking-widest uppercase">Linguistic Engine</span>
+</div>
+</div>
+</div>
+<div class="mb-auto">
+<div class="text-outline text-[10px] uppercase font-bold tracking-widest mb-1">Main Focus</div>
+<p class="text-on-surface font-medium text-lg leading-snug">Cross-referencing social signals with real-time trading spikes.</p>
+</div>
+<div class="mt-6 flex items-center gap-4">
+<div class="flex-1 h-1 bg-surface-variant rounded-full overflow-hidden">
+<div class="w-3/4 h-full bg-tertiary"></div>
+</div>
+<span class="text-tertiary text-[10px] font-mono">BULLISH 74%</span>
+</div>
+</div>
+</div>
+<!-- Execution Engine Card -->
+<div class="surface-container-high rounded-xl overflow-hidden flex flex-col h-80 border-l-2 border-primary-fixed shadow-2xl relative group">
+<div class="p-6 flex flex-col h-full">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-on-surface leading-tight">Execution Engine</h3>
+<span class="text-primary-fixed text-[10px] font-mono tracking-widest uppercase">Action Tier</span>
+</div>
+</div>
+</div>
+<div class="mb-auto">
+<div class="text-outline text-[10px] uppercase font-bold tracking-widest mb-1">Main Focus</div>
+<p class="text-on-surface font-medium text-lg leading-snug">Optimizing entry points and gas fee reduction logic.</p>
+</div>
+<div class="mt-6 bg-surface-container-lowest rounded p-3 font-mono text-[11px] text-primary-fixed/70">
+<p>&gt; WAITING_FOR_STRATEGY_SIGNAL...</p>
+</div>
+</div>
+</div>
+<!-- Synthesis Hub (Interactive Widget) -->
+<div class="surface-container rounded-xl overflow-hidden flex flex-col h-80 border border-outline-variant/15 shadow-2xl bg-gradient-to-br from-surface-container to-surface-container-low">
+<div class="p-6 flex flex-col h-full justify-center items-center text-center">
+<div class="w-20 h-20 rounded-full border-4 border-dashed border-primary/30 flex items-center justify-center mb-4 relative">
+<span class="material-symbols-outlined text-primary text-4xl animate-pulse">hub</span>
+<div class="absolute inset-0 rounded-full border border-primary/20 scale-125"></div>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-2">Neural Workspace</h3>
+<p class="text-on-surface-variant text-sm px-4">All agents are currently synchronized. Consensus reaching 89% threshold.</p>
+<button class="mt-6 text-primary text-xs font-bold uppercase tracking-widest hover:underline">View Decision Matrix</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Chat/Prompt Bottom Bar -->
+<div class="sticky bottom-0 w-full glass-panel border-t border-outline-variant/20 p-4 md:p-6 z-30">
+<div class="max-w-5xl mx-auto flex items-center gap-4">
+<div class="flex-1 relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-full py-4 px-12 text-on-surface placeholder:text-outline focus:ring-1 focus:ring-primary shadow-inner" placeholder="Direct meeting command... (e.g., 'Summarize risk factors')" type="text"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary opacity-70">terminal</span>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+<span class="material-symbols-outlined text-outline-variant cursor-pointer hover:text-on-surface">mic</span>
+<span class="material-symbols-outlined text-outline-variant cursor-pointer hover:text-on-surface">attachment</span>
+</div>
+</div>
+<button class="w-14 h-14 neural-gradient rounded-full flex items-center justify-center text-on-primary-fixed shadow-lg shadow-primary/30 transition-transform active:scale-90">
+<span class="material-symbols-outlined font-bold">send</span>
+</button>
+</div>
+<div class="max-w-5xl mx-auto flex gap-3 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+<button class="whitespace-nowrap bg-surface-container-high hover:bg-highest text-on-surface-variant text-[10px] font-bold px-3 py-1 rounded-full border border-outline-variant/20 transition-colors uppercase">Ask Strategy for pivot</button>
+<button class="whitespace-nowrap bg-surface-container-high hover:bg-highest text-on-surface-variant text-[10px] font-bold px-3 py-1 rounded-full border border-outline-variant/20 transition-colors uppercase">Audit Current Risks</button>
+<button class="whitespace-nowrap bg-surface-container-high hover:bg-highest text-on-surface-variant text-[10px] font-bold px-3 py-1 rounded-full border border-outline-variant/20 transition-colors uppercase">Sync All Scouts</button>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Nav -->
+<div class="lg:hidden fixed bottom-0 w-full bg-surface-container-low flex justify-around items-center h-16 z-50 border-t border-outline-variant/10">
+<div class="flex flex-col items-center text-primary">
+<span class="material-symbols-outlined">sensors</span>
+<span class="text-[10px] font-bold">Streams</span>
+</div>
+<div class="flex flex-col items-center text-[#38476d]">
+<span class="material-symbols-outlined">history</span>
+<span class="text-[10px]">History</span>
+</div>
+<div class="flex flex-col items-center text-[#38476d]">
+<span class="material-symbols-outlined">hub</span>
+<span class="text-[10px]">Map</span>
+</div>
+<div class="flex flex-col items-center text-[#38476d]">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px]">Settings</span>
+</div>
+</div>
+</body></html>

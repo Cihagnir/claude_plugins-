@@ -1,0 +1,8 @@
+{
+  "name": "agent-visualizer",
+  "version": "0.1.0",
+  "description": "Real-time browser visualization of agent communication, tool usage, and subagent lifecycle in Claude Code sessions",
+  "author": {
+    "name": "Cihangir"
+  }
+}
