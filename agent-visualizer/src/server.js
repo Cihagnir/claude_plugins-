@@ -43,6 +43,7 @@ function getOrCreateSession(sessionId) {
       startTime: new Date().toISOString(),
       endTime: null,
       status: "active",
+      cwd: null,
     });
     broadcastSessionsUpdate();
   }
@@ -76,6 +77,7 @@ function getSessionList() {
       status: session.status,
       conversation_id,
       transcript_path,
+      cwd: session.cwd || null,
     });
   });
   list.sort((a, b) => b.start_time.localeCompare(a.start_time));
@@ -155,6 +157,7 @@ function handlePostEvent(req, res) {
         tool_result: raw.tool_result || null,
         reason: raw.reason || null,
         transcript_path: raw.transcript_path || null,
+        cwd: raw.cwd || null,
         raw,
       };
 
@@ -168,7 +171,23 @@ function handlePostEvent(req, res) {
           subagent_type: event.tool_input.subagent_type || null,
           description: event.tool_input.description || null,
           prompt: event.tool_input.prompt || null,
+          parent_agent_id: event.agent_id || "main",
           timestamp: event.timestamp,
+          is_skill: false,
+        });
+        pendingDelegations.set(sid, queue);
+      }
+
+      // When parent agent invokes Skill tool, also queue a delegation
+      if (event.event_type === "PreToolUse" && event.tool_name === "Skill" && event.tool_input) {
+        const queue = pendingDelegations.get(sid) || [];
+        queue.push({
+          subagent_type: null,
+          description: event.tool_input.skill || null,
+          prompt: event.tool_input.args || null,
+          parent_agent_id: event.agent_id || "main",
+          timestamp: event.timestamp,
+          is_skill: true,
         });
         pendingDelegations.set(sid, queue);
       }
@@ -176,11 +195,18 @@ function handlePostEvent(req, res) {
       // When subagent starts, match to pending delegation and enrich the event
       if (event.event_type === "SubagentStart" && event.agent_type) {
         const queue = pendingDelegations.get(sid) || [];
-        const idx = queue.findIndex(d => d.subagent_type === event.agent_type);
+        // First: try exact match by subagent_type (for Agent tool delegations)
+        let idx = queue.findIndex(d => d.subagent_type === event.agent_type);
+        // Fallback: if no exact match, use the oldest unmatched skill delegation
+        if (idx === -1) {
+          idx = queue.findIndex(d => d.is_skill === true);
+        }
         if (idx !== -1) {
           const delegation = queue.splice(idx, 1)[0];
           event.delegation_description = delegation.description;
           event.delegation_prompt = delegation.prompt;
+          event.parent_agent_id = delegation.parent_agent_id;
+          event.is_skill_subagent = delegation.is_skill || false;
         }
         pendingDelegations.set(sid, queue);
       }
@@ -204,6 +230,7 @@ function handlePostEvent(req, res) {
       console.log(`[EVENT] type=${event.event_type} session=${sid} agent_type=${event.agent_type || '-'} transcript=${event.transcript_path || 'none'}`);
 
       const session = getOrCreateSession(sid);
+      if (event.cwd && !session.cwd) session.cwd = event.cwd;
       session.events.push(event);
       if (session.events.length > MAX_EVENTS_PER_SESSION) session.events.shift();
 

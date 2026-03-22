@@ -9,8 +9,17 @@ let input = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => (input += chunk));
 process.stdin.on("end", () => {
-  const body = input.trim();
+  let body = input.trim();
   if (!body) process.exit(0);
+
+  // Inject cwd if not already present so the server always knows the working directory
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed.cwd) {
+      parsed.cwd = process.cwd();
+      body = JSON.stringify(parsed);
+    }
+  } catch (_) { /* forward as-is if not valid JSON */ }
 
   const req = http.request(
     {
