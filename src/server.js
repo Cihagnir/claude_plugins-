@@ -36,6 +36,16 @@ const pendingDelegations = new Map();
 // transcript_path -> { conversation_id, session_ids: Set<string> }
 const conversationGroups = new Map();
 
+// Subagent session mapping: maps a subagent's own session_id to its canonical
+// agent identity so that events arriving on the subagent's session can be
+// attributed back to the correct agent card.
+// session_id -> { agent_id, agent_type }
+const subagentSessionMap = new Map();
+
+// Tracks known subagents awaiting their own session to appear.
+// conversation_id -> [{ agent_id, agent_type, parent_session_id }]
+const pendingSubagentSessions = new Map();
+
 function getOrCreateSession(sessionId) {
   if (!sessions.has(sessionId)) {
     sessions.set(sessionId, {
@@ -209,6 +219,52 @@ function handlePostEvent(req, res) {
           event.is_skill_subagent = delegation.is_skill || false;
         }
         pendingDelegations.set(sid, queue);
+
+        // Register the subagent so that when its own session appears in the
+        // same conversation group, we can attribute those events correctly.
+        // The subagent's own session_id is NOT available on SubagentStart —
+        // it arrives on the parent's session. So we queue by conversation group
+        // and match when a new session joins with a compatible agent_type.
+        if (event.agent_id && event.transcript_path) {
+          const convKey = event.transcript_path;
+          const pending = pendingSubagentSessions.get(convKey) || [];
+          pending.push({
+            agent_id: event.agent_id,
+            agent_type: event.agent_type,
+            parent_session_id: sid,
+          });
+          pendingSubagentSessions.set(convKey, pending);
+        }
+      }
+
+      // --- Subagent session enrichment ---
+      // When we see events from a session that we haven't mapped yet,
+      // check if it belongs to a known subagent by matching agent_type
+      // against pending subagent registrations in the same conversation group.
+      if (event.event_type !== "SubagentStart") {
+        const mapped = subagentSessionMap.get(sid);
+        if (mapped) {
+          // Session already mapped — stamp the event
+          if (!event.agent_id) event.agent_id = mapped.agent_id;
+          if (!event.agent_type) event.agent_type = mapped.agent_type;
+        } else if (!event.agent_id && event.transcript_path) {
+          // Try to match this session to a pending subagent
+          const pending = pendingSubagentSessions.get(event.transcript_path) || [];
+          // Match by agent_type if available, otherwise take the oldest pending
+          let idx = event.agent_type
+            ? pending.findIndex(p => p.agent_type === event.agent_type && p.parent_session_id !== sid)
+            : pending.findIndex(p => p.parent_session_id !== sid);
+          if (idx !== -1) {
+            const match = pending.splice(idx, 1)[0];
+            subagentSessionMap.set(sid, {
+              agent_id: match.agent_id,
+              agent_type: match.agent_type,
+            });
+            pendingSubagentSessions.set(event.transcript_path, pending);
+            event.agent_id = match.agent_id;
+            if (!event.agent_type) event.agent_type = match.agent_type;
+          }
+        }
       }
 
       // --- Conversation grouping by transcript_path ---
@@ -309,11 +365,13 @@ const wss = new WebSocketServer({ server });
 wss.on("connection", (ws) => {
   lastActivityTime = Date.now();
   // Send history with session list on connect
+  const allEvts = getAllEvents();
   ws.send(JSON.stringify({
     type: "history",
-    events: getAllEvents(),
+    events: allEvts,
     sessions: getSessionList(),
     conversations: getConversationList(),
+    earliest_timestamp: allEvts.length > 0 ? allEvts[0].timestamp : null,
   }));
 });
 

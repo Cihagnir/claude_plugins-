@@ -7,6 +7,7 @@
 | UI Designer | `agents/ui-designer.md` | Design, UX, Stitch prototyping |
 | Product Manager | `agents/pm.md` | Requirements, Jira, prioritization |
 | Full Stack Dev | `agents/fullstack-dev.md` | Code implementation, testing |
+| QA Tester | `agents/qa-tester.md` | Testing, bug verification, quality assurance |
 
 ## How to Use
 

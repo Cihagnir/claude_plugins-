@@ -4,7 +4,7 @@
   "plugins": [
     {
       "name": "agent-visualizer",
-      "path": "agent-visualizer"
+      "path": "."
     }
   ]
 }

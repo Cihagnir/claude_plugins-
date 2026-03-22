@@ -1,0 +1,680 @@
+/* ============================================================
+   AGENT TIMELINE — Gantt Chart Dashboard
+   Design: Stitch "Neural Conduit" system
+   ============================================================ */
+:root {
+    --bg: #060e20;
+    --surface-low: #081329;
+    --surface: #0c1934;
+    --surface-high: #101e3e;
+    --surface-highest: #162550;
+    --primary: #72dcff;
+    --primary-bright: #00d2ff;
+    --primary-dim: rgba(114, 220, 255, 0.4);
+    --accent-purple: #ddb7ff;
+    --accent-purple-dim: rgba(221, 183, 255, 0.3);
+    --secondary: #2ff801;
+    --error: #ffb4ab;
+    --on-surface: #e2e2e2;
+    --on-surface-var: #8899aa;
+    --outline: #2a3a50;
+    --outline-var: #1a2840;
+    --on-primary: #060e20;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", monospace;
+
+    --lane-height: 40px;
+    --label-width: 200px;
+    --time-axis-height: 32px;
+
+    /* Tool colors */
+    --tool-bash: #3b82f6;
+    --tool-write: #10b981;
+    --tool-edit: #f59e0b;
+    --tool-read: #8b5cf6;
+    --tool-glob: #14b8a6;
+    --tool-agent: #ec4899;
+    --tool-skill: #a855f7;
+    --tool-stop: #ffb4ab;
+    --tool-session: #4b5e6e;
+    --tool-notification: #f97316;
+    --tool-mcp: #f97316;
+    --tool-other: #4b5563;
+}
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--on-surface);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+::selection {
+    background: rgba(114, 220, 255, 0.25);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+#header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 48px;
+    padding: 0 20px;
+    background: var(--surface-low);
+    border-bottom: 1px solid var(--outline-var);
+    flex-shrink: 0;
+    z-index: 30;
+    backdrop-filter: blur(16px);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-logo {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-logo .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--on-primary);
+    font-weight: 700;
+}
+
+.header-title {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: white;
+}
+
+.header-project {
+    color: var(--primary);
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.header-project::before {
+    content: "/ ";
+    color: var(--on-surface-var);
+    opacity: 0.4;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.zoom-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--on-surface-var);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.zoom-btn:hover {
+    background: var(--surface-high);
+    color: var(--primary);
+}
+
+.zoom-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.zoom-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--on-surface-var);
+    min-width: 40px;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-select {
+    font-family: var(--font-body);
+    font-size: 11px;
+    padding: 4px 24px 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--outline-var);
+    border-radius: 4px;
+    color: var(--on-surface);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238899aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+}
+
+.header-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.header-select option {
+    background: var(--surface);
+}
+
+.header-meta {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--on-surface-var);
+}
+
+.header-status {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 4px;
+}
+
+.header-status.connected {
+    background: rgba(114, 220, 255, 0.1);
+    color: var(--primary);
+}
+
+.header-status.disconnected {
+    background: rgba(255, 180, 171, 0.1);
+    color: var(--error);
+}
+
+/* ============================================================
+   GANTT VIEW — Main Layout
+   ============================================================ */
+#gantt-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Time Axis --- */
+#gantt-time-axis {
+    height: var(--time-axis-height);
+    margin-left: var(--label-width);
+    background: var(--surface-low);
+    border-bottom: 1px solid var(--outline-var);
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.time-tick {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 4px;
+}
+
+.time-tick-line {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 8px;
+    background: var(--outline);
+}
+
+.time-tick-label {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--on-surface-var);
+    white-space: nowrap;
+    padding-left: 4px;
+    letter-spacing: 0.02em;
+    opacity: 0.5;
+}
+
+.time-tick-major .time-tick-line {
+    height: 12px;
+    background: var(--on-surface-var);
+}
+
+.time-tick-major .time-tick-label {
+    color: var(--on-surface);
+    opacity: 1;
+    font-weight: 600;
+    font-weight: 600;
+}
+
+/* --- Gantt Body --- */
+#gantt-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* --- Agent Labels (left sidebar) --- */
+#gantt-labels {
+    width: var(--label-width);
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--surface-low);
+    border-right: 1px solid var(--outline-var);
+    backdrop-filter: blur(16px);
+    scrollbar-width: none;
+}
+
+#gantt-labels::-webkit-scrollbar {
+    display: none;
+}
+
+.gantt-label {
+    height: var(--lane-height);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(26, 40, 64, 0.5);
+    transition: background 0.15s;
+}
+
+.gantt-label:hover {
+    background: var(--surface);
+}
+
+.gantt-label.subagent {
+    padding-left: 28px;
+}
+
+.gantt-label-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.gantt-label-dot.active {
+    background: var(--secondary);
+    box-shadow: 0 0 6px var(--secondary);
+}
+
+.gantt-label-dot.stopped {
+    background: var(--on-surface-var);
+    opacity: 0.4;
+}
+
+.gantt-label-icon {
+    flex-shrink: 0;
+}
+
+.gantt-label-icon .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--primary);
+    font-variation-settings: "FILL" 1;
+}
+
+.gantt-label.subagent .gantt-label-icon .material-symbols-outlined {
+    color: var(--accent-purple);
+}
+
+.gantt-label-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--on-surface);
+    letter-spacing: -0.01em;
+}
+
+.gantt-label.subagent .gantt-label-text {
+    color: var(--on-surface-var);
+    font-size: 10px;
+}
+
+/* --- Chart Scroll Area --- */
+#gantt-chart-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: auto;
+    position: relative;
+}
+
+#gantt-svg {
+    display: block;
+    min-width: 100%;
+}
+
+/* SVG Gantt bar hover effects via CSS */
+.gantt-bar {
+    opacity: 0.8;
+    transition: opacity 0.15s, filter 0.15s;
+    cursor: pointer;
+}
+
+.gantt-bar:hover {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(114, 220, 255, 0.3));
+}
+
+/* Agent accent bar (purple vertical line at lane start) */
+.gantt-accent {
+    opacity: 0.6;
+}
+
+/* --- Now Line --- */
+#gantt-now-line {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary), 0 0 16px rgba(114, 220, 255, 0.3);
+    z-index: 10;
+    pointer-events: none;
+    transition: left 0.3s linear;
+}
+
+#gantt-now-line::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background: var(--primary);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--primary);
+}
+
+/* --- Tooltip --- */
+#gantt-tooltip {
+    position: fixed;
+    z-index: 100;
+    pointer-events: none;
+    background: rgba(12, 25, 52, 0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--outline);
+    border-radius: 6px;
+    padding: 8px 12px;
+    max-width: 300px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 16px rgba(114, 220, 255, 0.06);
+}
+
+#gantt-tooltip.hidden {
+    display: none;
+}
+
+.tooltip-tool {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 2px;
+}
+
+.tooltip-duration {
+    font-size: 10px;
+    color: var(--on-surface-var);
+    margin-bottom: 2px;
+}
+
+.tooltip-detail {
+    font-size: 10px;
+    color: var(--on-surface);
+    word-break: break-word;
+}
+
+/* --- Jump to Now Button --- */
+#jump-to-now {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+    color: var(--on-primary);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(114, 220, 255, 0.3);
+    transition: all 0.2s;
+}
+
+#jump-to-now:hover {
+    box-shadow: 0 6px 24px rgba(114, 220, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+#jump-to-now.hidden {
+    display: none;
+}
+
+#jump-to-now .material-symbols-outlined {
+    font-size: 16px;
+}
+
+/* --- Empty State --- */
+.empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 32px;
+}
+
+.empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--on-surface);
+    margin-bottom: 6px;
+}
+
+.empty-desc {
+    font-size: 12px;
+    color: var(--on-surface-var);
+}
+
+/* ============================================================
+   COMMAND CONSOLE FOOTER
+   ============================================================ */
+#console-footer {
+    height: 40px;
+    flex-shrink: 0;
+    z-index: 20;
+    background: var(--surface-low);
+    border-top: 1px solid var(--outline-var);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+}
+
+.console-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.console-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--secondary);
+    animation: pulse-dot 2s infinite;
+}
+
+.console-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--on-surface-var);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.console-scroll {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.console-text {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--on-surface-var);
+    letter-spacing: 0.02em;
+    cursor: default;
+}
+
+.console-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--outline-var);
+    padding-left: 12px;
+}
+
+.console-meta {
+    font-size: 9px;
+    font-weight: 500;
+    color: rgba(114, 220, 255, 0.5);
+    text-transform: uppercase;
+}
+
+.console-purge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--outline-var);
+    border-radius: 3px;
+    color: var(--on-surface-var);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: all 0.15s;
+}
+
+.console-purge:hover {
+    background: var(--surface-high);
+    color: var(--on-surface);
+    border-color: var(--primary);
+}
+
+/* ============================================================
+   ANIMATIONS & SCROLLBAR
+   ============================================================ */
+@keyframes pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+@keyframes bar-appear {
+    from {
+        opacity: 0;
+        transform: scaleX(0.3);
+    }
+    to {
+        opacity: 0.8;
+        transform: scaleX(1);
+    }
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--outline);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--on-surface-var);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--outline) transparent;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    :root {
+        --label-width: 140px;
+        --lane-height: 34px;
+    }
+
+    .header-select,
+    .header-meta {
+        display: none;
+    }
+
+    .zoom-label {
+        display: none;
+    }
+
+    #header {
+        padding: 0 12px;
+    }
+}
