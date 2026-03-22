@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Starts the agent-visualizer server (if not already running) and opens the browser dashboard.
-# Called by the SessionStart hook.
+# Starts the agent-visualizer server (if not already running).
+# Called by the SessionStart hook. Visualization is shown in the Claude Code status line.
 
 set -euo pipefail
 
@@ -21,13 +21,7 @@ if [ -f "$SHARED_PID_FILE" ] && kill -0 "$(cat "$SHARED_PID_FILE")" 2>/dev/null;
   exit 0
 fi
 
-# Install dependencies if needed
-if [ ! -d "$PLUGIN_ROOT/node_modules/ws" ]; then
-  cd "$PLUGIN_ROOT" && npm install --production --silent 2>/dev/null
-fi
-
 # Start server in background
-cd "$PLUGIN_ROOT"
 AGENT_VIZ_PORT="$PORT" node "$PLUGIN_ROOT/src/server.js" &>/dev/null &
 SERVER_PID=$!
 echo "$SERVER_PID" > "$SHARED_PID_FILE"
@@ -39,16 +33,6 @@ for i in $(seq 1 15); do
   fi
   sleep 0.2
 done
-
-# Open browser
-URL="http://localhost:${PORT}"
-if command -v xdg-open &>/dev/null; then
-  xdg-open "$URL" &>/dev/null &
-elif command -v open &>/dev/null; then
-  open "$URL" &>/dev/null &
-elif command -v wslview &>/dev/null; then
-  wslview "$URL" &>/dev/null &
-fi
 
 # Forward the session start event to the server
 echo "$INPUT" | node "$PLUGIN_ROOT/hooks/scripts/send-event.js" 2>/dev/null &

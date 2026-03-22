@@ -1,101 +1,60 @@
 # Agent Viewer
 
-Real-time Gantt chart dashboard that visualizes what your Claude Code agents are doing — tool calls, subagent spawns, and task delegation — all on a live timeline.
-
-![Agent Viewer Dashboard](stitch_project/screenshots/ai_agent_dashboard.png)
+Real-time terminal Gantt chart that visualizes what your Claude Code agents are doing — tool calls, subagent spawns, and task delegation — all on a live timeline in your terminal.
 
 ## What It Does
 
-When Claude Code runs agents and tools, this plugin captures every event and displays it as a horizontal timeline:
+When Claude Code runs agents and tools, this plugin captures every event and displays it as a horizontal timeline directly in your terminal:
 
 - **Each agent gets a row** — main agent at top, subagents below
 - **Activity bars** show what each agent is doing over time, color-coded by tool type
-- **Real-time updates** — the timeline auto-scrolls to follow live activity
-- **Hover any bar** to see the tool name, duration, and details
+- **Real-time updates** — the chart refreshes after every assistant message
+- **Runs in your terminal** — no browser needed, displayed directly below the Claude Code input
 
 ## Requirements
 
 - **Node.js** 18+ (with npm)
 - **Claude Code** CLI
-- A modern browser (Chrome, Firefox, Edge, Safari)
 
 ## Installation
 
-### 1. Clone the repository
+```bash
+git clone https://github.com/cihangir/agent-viewer.git
+cd agent-viewer
+bash install.sh
+```
+
+That's it. The install script will:
+1. Register event hooks in your Claude Code settings (`~/.claude/settings.json`)
+2. Configure the terminal Gantt chart as your Claude Code status line
+
+Start a new Claude Code session and the timeline will appear below your input.
+
+## Uninstall
 
 ```bash
-git clone <repo-url> agent_viewer
-cd agent_viewer
+bash uninstall.sh
 ```
 
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-This installs the only dependency: `ws` (WebSocket library).
-
-### 3. Register as a Claude Code plugin
-
-Add the plugin to your Claude Code configuration. Open or create your Claude Code settings file:
-
-```bash
-# Global plugins (available in all projects)
-~/.claude/plugins/marketplaces/local/plugins.json
-
-# Or project-level plugins
-.claude/plugins/marketplaces/local/plugins.json
-```
-
-Add this entry:
-
-```json
-{
-  "name": "local-plugins",
-  "description": "Local custom plugins",
-  "plugins": [
-    {
-      "name": "agent-visualizer",
-      "path": "/absolute/path/to/agent_viewer"
-    }
-  ]
-}
-```
-
-Replace `/absolute/path/to/agent_viewer` with the actual path where you cloned the repo.
-
-### 4. Verify installation
-
-Start a Claude Code session. The plugin hooks should automatically:
-
-1. Start the visualization server on port 3399
-2. Open the dashboard in your default browser
-3. Begin capturing events
-
-If the browser doesn't open automatically, navigate to: **http://localhost:3399**
+Removes all hooks and the status line from your Claude Code settings. Does not delete any files.
 
 ## How It Works
 
 ```
-Claude Code ──(hooks)──> Server ──(WebSocket)──> Browser Dashboard
+Claude Code ──(hooks)──> Server ──(HTTP API)──> Statusline Renderer
 ```
 
 1. **Hooks** — The plugin registers lifecycle hooks with Claude Code (`hooks/hooks.json`). These fire on every tool call, subagent spawn/stop, and session start/end.
 
 2. **Event forwarding** — Hook scripts (`hooks/scripts/`) read the event JSON from stdin and POST it to the local server.
 
-3. **Server** (`src/server.js`) — A lightweight Node.js HTTP + WebSocket server that:
+3. **Server** (`src/server.js`) — A lightweight Node.js HTTP server that:
    - Receives events via `POST /api/event`
    - Enriches them (delegation matching, conversation grouping)
-   - Broadcasts to all connected browser clients via WebSocket
+   - Serves event data via `GET /api/events` for the statusline renderer
    - Auto-starts on first session, auto-shuts down after 30 min inactivity
 
-4. **Dashboard** (`public/`) — A browser-based Gantt chart that:
-   - Groups consecutive tool events into activity period bars
-   - Color-codes bars by tool type (blue=Bash, green=Write, orange=Edit, etc.)
-   - Auto-scrolls to follow real-time activity
-   - Supports zoom (2–64 px/s) and session switching
+4. **Statusline** (`statusline/gantt-statusline.js`) — A terminal Gantt chart renderer that fetches events from the server and draws an ASCII timeline.
 
 ## Configuration
 
@@ -111,14 +70,25 @@ export AGENT_VIZ_PORT=8080
 
 ## Usage
 
-Once installed, the dashboard is fully automatic:
+Once installed, the timeline is fully automatic:
 
-- **Start a Claude Code session** — the dashboard opens in your browser
-- **Multiple sessions** — all sessions on the same server are visible; use the session selector dropdown to switch
-- **Zoom** — use the +/− buttons in the header to zoom in/out on the timeline
-- **Auto-scroll** — the timeline follows live activity. Scroll manually to pause; click "Jump to Now" to resume
-- **Hover bars** — see tool name, duration, and event count
-- **PURGE** — click the PURGE button in the footer to clear events for the selected session
+- **Start a Claude Code session** — the server starts and the Gantt chart appears in your terminal
+- **Activity bars** grow in real-time as agents work — colored by tool type
+- **Multiple agents** — main agent at top, subagents below with indentation
+- **Stats** — agent count, event count, and session duration at the bottom
+
+## What It Looks Like
+
+```
+ Main Agent   │ ▓▓▓▓████░░██▓▓▓▓▓▓████████░░▓▓██████
+ Explore      │         ████████░░░░░░░░░░████
+ Dev          │                   ░░██████████████████
+─────────────┴──────────────────────────────────────
+  ██ Bash  ██ Write  ██ Edit  ██ Read  ██ Glob  ██ Agent  ██ Skill  ██ Thinking  ██ MCP  ▓▓ Active
+  Agents: 3  Events: 47  Duration: 2m 15s
+```
+
+Each row is an agent. Colored bars show tool activity over time. The chart updates live as agents work.
 
 ## Tool Color Legend
 
@@ -126,43 +96,42 @@ Once installed, the dashboard is fully automatic:
 |-------|-------|
 | Blue | Bash |
 | Green | Write |
-| Orange | Edit, MultiEdit |
+| Yellow | Edit, MultiEdit |
 | Purple | Read |
 | Teal | Glob, Grep |
 | Pink | Agent (subagent spawn) |
+| Amber | Thinking |
 | Violet | Skill |
 | Orange | MCP tools, Notifications |
 
 ## Project Structure
 
 ```
-agent_viewer/
+agent-viewer/
+├── install.sh                  # One-command setup
+├── uninstall.sh                # Clean removal
 ├── hooks/
 │   ├── hooks.json              # Hook event definitions
 │   └── scripts/                # Event forwarding scripts
-├── public/
-│   ├── index.html              # Dashboard HTML
-│   ├── app.js                  # Client-side Gantt chart logic
-│   └── style.css               # Styling (dark navy theme)
+├── statusline/
+│   └── gantt-statusline.js     # Terminal Gantt chart renderer
 ├── src/
-│   └── server.js               # HTTP + WebSocket server
-├── .claude-plugin/
-│   └── plugin.json             # Plugin metadata
+│   └── server.js               # HTTP event server
 ├── package.json
-└── version_notes.md            # Detailed version history
+└── version_notes.md
 ```
 
 ## Troubleshooting
 
-**Dashboard doesn't open automatically**
+**Status line not showing**
+- Verify install ran successfully: check `~/.claude/settings.json` has a `statusLine` entry
+- Re-run `bash install.sh` to fix
+
+**No events / empty chart**
 - Check if the server is running: `curl http://localhost:3399/api/health`
 - If not, start it manually: `node src/server.js`
-- Open `http://localhost:3399` in your browser
-
-**No events appearing**
-- Verify the plugin is registered: check that `hooks/hooks.json` is being loaded by Claude Code
-- Check server logs for incoming events (the server logs each event to stdout)
-- Make sure `node` is available in your PATH when hooks execute
+- Verify hooks are in `~/.claude/settings.json` — look for entries referencing your install path
+- Make sure `node` is available in your PATH
 
 **Port conflict**
 - Set a different port: `export AGENT_VIZ_PORT=8080`
@@ -172,6 +141,13 @@ agent_viewer/
 - Check if another process is using port 3399: `lsof -i :3399`
 - Remove stale PID file if needed: `rm /tmp/agent-viz-server.pid`
 
+**Re-install after moving the repo**
+- Run `bash install.sh` again from the new location — it updates all paths automatically
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to report bugs, submit changes, and run locally.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.

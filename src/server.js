@@ -2,26 +2,12 @@
 "use strict";
 
 const http = require("http");
-const fs = require("fs");
-const path = require("path");
-const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 
 const PORT = parseInt(process.env.AGENT_VIZ_PORT || "3399", 10);
 const MAX_EVENTS_PER_SESSION = 10000;
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const SESSION_EXPIRY_MS = 60 * 60 * 1000; // 1 hour after session ends
-
-const PUBLIC_DIR = path.join(__dirname, "..", "public");
-
-const MIME_TYPES = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "application/javascript",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".svg": "image/svg+xml",
-};
 
 // In-memory session-indexed event store
 // sessionId -> { events: [], startTime, endTime, status }
@@ -55,7 +41,6 @@ function getOrCreateSession(sessionId) {
       status: "active",
       cwd: null,
     });
-    broadcastSessionsUpdate();
   }
   return sessions.get(sessionId);
 }
@@ -65,59 +50,6 @@ function getAllEvents() {
   sessions.forEach((s) => all.push(...s.events));
   all.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   return all;
-}
-
-function getSessionList() {
-  const list = [];
-  sessions.forEach((session, sid) => {
-    // Find conversation_id for this session
-    let conversation_id = null;
-    let transcript_path = null;
-    conversationGroups.forEach((group, tpath) => {
-      if (group.session_ids.has(sid)) {
-        conversation_id = group.conversation_id;
-        transcript_path = tpath;
-      }
-    });
-    list.push({
-      session_id: sid,
-      event_count: session.events.length,
-      start_time: session.startTime,
-      end_time: session.endTime,
-      status: session.status,
-      conversation_id,
-      transcript_path,
-      cwd: session.cwd || null,
-    });
-  });
-  list.sort((a, b) => b.start_time.localeCompare(a.start_time));
-  return list;
-}
-
-function getConversationList() {
-  const list = [];
-  conversationGroups.forEach((group, tpath) => {
-    list.push({
-      conversation_id: group.conversation_id,
-      transcript_path: tpath,
-      session_ids: Array.from(group.session_ids),
-    });
-  });
-  return list;
-}
-
-function broadcastSessionsUpdate() {
-  const msg = JSON.stringify({ type: "sessions_updated", sessions: getSessionList(), conversations: getConversationList() });
-  wss.clients.forEach((client) => {
-    if (client.readyState === 1) client.send(msg);
-  });
-}
-
-function broadcastConversationsUpdate() {
-  const msg = JSON.stringify({ type: "sessions_updated", sessions: getSessionList(), conversations: getConversationList() });
-  wss.clients.forEach((client) => {
-    if (client.readyState === 1) client.send(msg);
-  });
 }
 
 // --- HTTP Server ---
@@ -135,9 +67,6 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && pathname === "/api/events") {
     return handleGetEvents(req, res, parsedUrl);
   }
-  if (req.method === "GET" && pathname === "/api/sessions") {
-    return handleGetSessions(req, res);
-  }
   if (req.method === "GET" && pathname === "/api/health") {
     const totalEvents = Array.from(sessions.values()).reduce((n, s) => n + s.events.length, 0);
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -145,8 +74,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Static file serving
-  serveStatic(req, res);
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Not found" }));
 });
 
 function handlePostEvent(req, res) {
@@ -161,7 +90,7 @@ function handlePostEvent(req, res) {
         event_type: raw.hook_event_name || "unknown",
         session_id: raw.session_id || null,
         agent_id: raw.agent_id || null,
-        agent_type: raw.agent_type || null,
+        agent_type: raw.agent_type || raw.subagent_type || null,
         tool_name: raw.tool_name || null,
         tool_input: raw.tool_input || null,
         tool_result: raw.tool_result || null,
@@ -274,12 +203,31 @@ function handlePostEvent(req, res) {
           group = { conversation_id: sid, session_ids: new Set() };
           conversationGroups.set(event.transcript_path, group);
         }
-        const isNewSession = !group.session_ids.has(sid);
         group.session_ids.add(sid);
         event.conversation_id = group.conversation_id;
-        if (isNewSession && group.session_ids.size > 1) {
-          // New session joined an existing conversation — broadcast update
-          broadcastConversationsUpdate();
+
+        // --- Auto-detect subagents by conversation membership ---
+        // If this session is NOT the first in the conversation and has no
+        // agent_id yet, it's a subagent session. Assign a synthetic identity
+        // so the client can show it as a separate agent row.
+        if (!event.agent_id && group.conversation_id !== sid) {
+          const mapped = subagentSessionMap.get(sid);
+          if (mapped) {
+            event.agent_id = mapped.agent_id;
+            if (!event.agent_type) event.agent_type = mapped.agent_type;
+          } else {
+            // First time seeing this subagent session — create synthetic identity
+            const syntheticId = `sub-${sid.slice(0, 8)}`;
+            const syntheticType = event.agent_type || "Subagent";
+            subagentSessionMap.set(sid, { agent_id: syntheticId, agent_type: syntheticType });
+            event.agent_id = syntheticId;
+            if (!event.agent_type) event.agent_type = syntheticType;
+          }
+        }
+
+        // If this IS the first session (main agent), stamp it
+        if (!event.agent_id && group.conversation_id === sid) {
+          event.agent_id = "main";
         }
       }
 
@@ -294,14 +242,7 @@ function handlePostEvent(req, res) {
       if (event.event_type === "SessionEnd") {
         session.endTime = event.timestamp;
         session.status = "ended";
-        broadcastSessionsUpdate();
       }
-
-      // Broadcast event to all WebSocket clients
-      const msg = JSON.stringify(event);
-      wss.clients.forEach((client) => {
-        if (client.readyState === 1) client.send(msg);
-      });
 
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
@@ -327,54 +268,6 @@ function handleGetEvents(req, res, parsedUrl) {
   res.end(JSON.stringify(result));
 }
 
-function handleGetSessions(req, res) {
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(getSessionList()));
-}
-
-function serveStatic(req, res) {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  let filePath = parsedUrl.pathname === "/" ? "/index.html" : parsedUrl.pathname;
-  filePath = path.join(PUBLIC_DIR, path.normalize(filePath));
-
-  // Prevent directory traversal
-  if (!filePath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403);
-    res.end("Forbidden");
-    return;
-  }
-
-  const ext = path.extname(filePath);
-  const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { "Content-Type": "text/html" });
-      res.end("<h1>404 Not Found</h1>");
-      return;
-    }
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(data);
-  });
-}
-
-// --- WebSocket Server ---
-
-const wss = new WebSocketServer({ server });
-
-wss.on("connection", (ws) => {
-  lastActivityTime = Date.now();
-  // Send history with session list on connect
-  const allEvts = getAllEvents();
-  ws.send(JSON.stringify({
-    type: "history",
-    events: allEvts,
-    sessions: getSessionList(),
-    conversations: getConversationList(),
-    earliest_timestamp: allEvts.length > 0 ? allEvts[0].timestamp : null,
-  }));
-});
-
 // --- Lifecycle ---
 
 server.listen(PORT, "0.0.0.0", () => {
@@ -390,23 +283,18 @@ const inactivityTimer = setInterval(() => {
   }
   // Prune ended sessions older than SESSION_EXPIRY_MS
   const now = Date.now();
-  let pruned = false;
   sessions.forEach((session, sid) => {
     if (session.status === "ended" && session.endTime) {
       const endedAt = new Date(session.endTime).getTime();
       if (now - endedAt > SESSION_EXPIRY_MS) {
         sessions.delete(sid);
-        pruned = true;
       }
     }
   });
-  if (pruned) broadcastSessionsUpdate();
 }, 60000);
 
 function shutdown() {
   clearInterval(inactivityTimer);
-  wss.clients.forEach((client) => client.close());
-  wss.close();
   server.close(() => process.exit(0));
   // Force exit after 5s
   setTimeout(() => process.exit(0), 5000);

@@ -1,7 +1,7 @@
 {
-  "name": "agent-visualizer",
-  "version": "0.1.0",
-  "description": "Real-time browser visualization of agent communication, tool usage, and subagent lifecycle in Claude Code sessions",
+  "name": "agent-viewer",
+  "version": "0.0.3",
+  "description": "Real-time terminal Gantt chart that visualizes Claude Code agent activity — tool calls, subagent spawns, and task delegation",
   "author": {
     "name": "Cihangir"
   }

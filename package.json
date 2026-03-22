@@ -1,9 +1,25 @@
 {
-  "name": "agent-visualizer",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Claude Code plugin for real-time agent communication visualization",
-  "dependencies": {
-    "ws": "^8.18.0"
-  }
+  "name": "agent-viewer",
+  "version": "0.0.3",
+  "description": "Real-time terminal Gantt chart that visualizes Claude Code agent activity",
+  "license": "MIT",
+  "author": {
+    "name": "Cihangir"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "visualization",
+    "agent",
+    "gantt",
+    "terminal",
+    "statusline"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {}
 }
