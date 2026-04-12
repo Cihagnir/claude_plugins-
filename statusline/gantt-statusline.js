@@ -251,26 +251,62 @@ function renderChart(events, sessionInfo) {
   // ── Bottom separator ──
   lines.push(`${COLORS.separator}${"─".repeat(labelWidth)}┴${"─".repeat(chartWidth + 2)}${RESET}`);
 
-  // ── Legend ──
-  const legend = [
-    `${COLORS.bash}██${RESET} Bash`,
-    `${COLORS.write}██${RESET} Write`,
-    `${COLORS.edit}██${RESET} Edit`,
-    `${COLORS.read}██${RESET} Read`,
-    `${COLORS.glob}██${RESET} Glob`,
-    `${COLORS.agent}██${RESET} Agent`,
-    `${COLORS.skill}██${RESET} Skill`,
-    `${COLORS.thinking}██${RESET} Thinking`,
-    `${COLORS.mcp}██${RESET} MCP`,
-    `${COLORS.active}▓▓${RESET} Active`,
+  // ── Dynamic Legend ──
+  const usedTools = new Set();
+  events.forEach(ev => {
+    const name = ev.tool_name?.toLowerCase();
+    if (name) {
+      if (name.startsWith("mcp_") || name.startsWith("mcp__")) usedTools.add("mcp");
+      else if (COLORS[name]) usedTools.add(name);
+      else usedTools.add("other");
+    }
+  });
+  const legendMap = [
+    ["bash", "Bash"], ["write", "Write"], ["edit", "Edit"], ["read", "Read"],
+    ["glob", "Glob"], ["grep", "Grep"], ["agent", "Agent"], ["skill", "Skill"],
+    ["thinking", "Thinking"], ["mcp", "MCP"], ["other", "Other"],
   ];
-  lines.push(`  ${legend.join("  ")}`);
+  const legend = [];
+  for (const [key, label] of legendMap) {
+    if (usedTools.has(key)) legend.push(`${COLORS[key]}██${RESET} ${label}`);
+  }
+  if (hasActive) legend.push(`${COLORS.active}▓▓${RESET} Active`);
+  if (legend.length > 0) lines.push(`  ${legend.join("  ")}`);
 
-  // ── Stats ──
+  // ── Session info line ──
   const activeCount = Array.from(agents.values()).filter((a) => a.status === "active").length;
-  const totalEvents = events.length;
   const durationStr = formatDuration(duration);
-  lines.push(`  ${COLORS.stat}Agents: ${agents.size} (${activeCount} active)${COLORS.separator} │ ${COLORS.stat}Events: ${totalEvents}${COLORS.separator} │ ${COLORS.stat}Duration: ${durationStr}${RESET}`);
+  const modelName = sessionInfo.model?.display_name || sessionInfo.model?.id || null;
+  const contextPct = sessionInfo.context_window?.used_percentage ?? null;
+  const costUsd = sessionInfo.cost?.total_cost_usd ?? null;
+
+  const parts = [];
+  if (modelName) parts.push(`${COLORS.accent}◆ ${modelName}${RESET}`);
+  if (contextPct !== null) {
+    parts.push(`Ctx: ${renderProgressBar(contextPct, 16)} ${COLORS.stat}${Math.round(contextPct)}%${RESET}`);
+  }
+  if (costUsd !== null) parts.push(`${COLORS.stat}$${costUsd.toFixed(2)}${RESET}`);
+  parts.push(`${COLORS.stat}${agents.size} agent${agents.size !== 1 ? "s" : ""} (${activeCount} active)${RESET}`);
+  parts.push(`${COLORS.stat}${durationStr}${RESET}`);
+  lines.push(`  ${parts.join(`${COLORS.separator} │ ${RESET}`)}`);
+
+  // ── Subscription rate limits (Pro/Max only) ──
+  const rateLimits5h = sessionInfo.rate_limits?.five_hour ?? null;
+  const rateLimits7d = sessionInfo.rate_limits?.seven_day ?? null;
+  if (rateLimits5h || rateLimits7d) {
+    const rlParts = [];
+    if (rateLimits5h) {
+      const pct5 = rateLimits5h.used_percentage ?? 0;
+      let resetStr = "";
+      if (rateLimits5h.resets_at) resetStr = ` resets ${formatResetTime(rateLimits5h.resets_at)}`;
+      rlParts.push(`${COLORS.stat}⚡ 5h: ${renderProgressBar(pct5, 14)} ${Math.round(pct5)}%${resetStr}${RESET}`);
+    }
+    if (rateLimits7d) {
+      const pct7 = rateLimits7d.used_percentage ?? 0;
+      rlParts.push(`${COLORS.stat}7d: ${renderProgressBar(pct7, 14)} ${Math.round(pct7)}%${RESET}`);
+    }
+    lines.push(`  ${rlParts.join(`${COLORS.separator} │ ${RESET}`)}`);
+  }
 
   return lines.join("\n");
 }
@@ -311,6 +347,24 @@ function renderTimeAxis(startTime, duration, chartWidth, labelWidth) {
 
   axis += `${COLORS.time}${marks.join("")}${RESET}`;
   return axis;
+}
+
+// ── Progress bar renderer ──
+function renderProgressBar(percentage, width = 20) {
+  const pct = Math.max(0, Math.min(100, percentage));
+  const filled = Math.round((pct / 100) * width);
+  const empty = width - filled;
+  let color;
+  if (pct < 50) color = fg(83);       // green
+  else if (pct < 80) color = fg(220);  // yellow
+  else color = fg(196);                // red
+  return `${COLORS.dim}▕${color}${"█".repeat(filled)}${COLORS.idle}${"░".repeat(empty)}${COLORS.dim}▏${RESET}`;
+}
+
+function formatResetTime(epochMs) {
+  if (!epochMs) return "";
+  const d = new Date(epochMs);
+  return d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
 // ── Utilities ──

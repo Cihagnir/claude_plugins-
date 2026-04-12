@@ -3,5 +3,4 @@ node_modules/
 *.log
 .env*
 .DS_Store
-tmp/
-.claude/settings.local.json
+tmp
